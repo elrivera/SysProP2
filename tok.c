@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
@@ -14,6 +15,7 @@ static int closed;
 static int input;
 
 void tok_init(int fd){
+
     input = fd;
     pos = 0;
     bytes = 0;
@@ -21,12 +23,15 @@ void tok_init(int fd){
 }
 
 char *next_tok(void){
+
     if (closed) return NULL;
     // skip whitespace
     while (1) {
     // ensure we have a char to read
     if (pos == bytes) {
-            bytes = read(input, buf, BUFSIZE);
+            printf("read\n");
+            bytes = read(STDIN_FILENO, buf, BUFSIZE);
+            printf("red\n");
             if (bytes < 1) {
                 closed = 1;
                 return NULL;
@@ -43,10 +48,12 @@ char *next_tok(void){
     char *tok = NULL;
     int toklen = 0;
     do {
+        printf("readcom\n");
         ++pos;
         if (pos == bytes) {
+            printf("ref\n");
             // refresh the buffer
-            bytes = read(input, buf, BUFSIZE);
+            bytes = read(STDIN_FILENO, buf, BUFSIZE);
             if (bytes < 1) {
                 closed = 1;
                 break;
