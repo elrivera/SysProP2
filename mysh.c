@@ -4,7 +4,7 @@
 #include <string.h>
 #include "arraylist.h"
 #include "tok.h"
-
+ 
 list_t parse(int fd);
 
 int main(){
@@ -13,10 +13,14 @@ int main(){
     char *msg="you wrote:";
     char *omsg="goodbye!\n";
     char *q = "q";
+    char *nl = "\n";
+    char * s = " ";
     printf("Welcome to MyShell!\n");
     
     while (1) {
+        //write mysh prompt
         write (STDOUT_FILENO, msgg, strlen(msgg));
+
         /*
         int n;
         n=read (STDIN_FILENO, buf, sizeof(buf));
@@ -25,15 +29,21 @@ int main(){
         write (STDOUT_FILENO, buf, n);
         */
         
+        //create arraylist of commands
         list_t commands = parse(STDIN_FILENO);
-        //do stuff//
+        
+
+        //temp code to made sure commands are reaching arraylist here (they are)
         int j = size(&commands);
         if (j == 0) continue;
         for(int i = 0; i < j; i++){
             char* p = al_lookup(&commands, i);
             write (STDOUT_FILENO, p, strlen(p));
+            write (STDOUT_FILENO, s, strlen(s));
         }
-        
+        write (STDOUT_FILENO, nl, strlen(nl));
+
+        //do stuff//
     }
 }
 
@@ -46,9 +56,10 @@ void read_input(){
 }
 */
 
+//take input and compose into arrayList
 list_t parse(int fd){
     list_t commands;
-    al_init(&commands, 8);
+    al_init(&commands, 16);
 
     //printf("here\n");
 
@@ -57,14 +68,15 @@ list_t parse(int fd){
     tok_init(fd);
     //printf("5here\n");
     
+    //call tokenizer and fill arraylist
     while((tok = next_tok())){
         //printf("2here\n");
-        printf("%s\n", tok);
+        //printf("%s\n", tok);
         al_push(&commands, strdup(tok));
         free(tok);
     }
     
-    printf("3here\n");
+    //printf("3here\n");
 
     return commands;
 }

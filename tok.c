@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "tok.h"
-
+ 
 #ifndef BUFSIZE
 #define BUFSIZE 128
 #endif
@@ -26,19 +26,20 @@ char *next_tok(void){
 
     if (closed) return NULL;
     // skip whitespace
+    
     while (1) {
     // ensure we have a char to read
     if (pos == bytes) {
-            printf("read\n");
+            //printf("read\n");
             bytes = read(STDIN_FILENO, buf, BUFSIZE);
-            printf("red\n");
+            //printf("red\n");
             if (bytes < 1) {
                 closed = 1;
                 return NULL;
             }
             pos = 0;
         }
-
+        if (buf[pos] == '\n') return NULL;
         if (!isspace(buf[pos])) break;
         ++pos;
     }
@@ -47,9 +48,19 @@ char *next_tok(void){
     int start = pos;
     char *tok = NULL;
     int toklen = 0;
+    
     do {
-        printf("readcom\n");
+        //printf("readcom\n");
+        
         ++pos;
+
+        if(buf[pos] == '\n') {
+            if(pos > start){
+                //pos--;
+                break;
+            }
+        }
+
         if (pos == bytes) {
             printf("ref\n");
             // refresh the buffer
