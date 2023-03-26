@@ -39,31 +39,34 @@ char *next_tok(void){
             }
             pos = 0;
         }
+        //if new line return null (end of line)
         if (buf[pos] == '\n') return NULL;
         if (!isspace(buf[pos])) break;
         ++pos;
     }
 
-    // start reading a command
+    // start reading text
     int start = pos;
     char *tok = NULL;
     int toklen = 0;
     
     do {
         //printf("readcom\n");
-        
+
+        //increment forward
         ++pos;
 
+        //check for end of line
         if(buf[pos] == '\n') {
             if(pos > start){
-                //pos--;
                 break;
             }
         }
 
+        //if reached end of buffer
         if (pos == bytes) {
-            printf("ref\n");
-            // refresh the buffer
+            //printf("ref\n");
+            // refresh the buffer (see if at end)
             bytes = read(STDIN_FILENO, buf, BUFSIZE);
             if (bytes < 1) {
                 closed = 1;
@@ -79,6 +82,7 @@ char *next_tok(void){
             pos = 0;
             start = 0;
         }
+
     } while (!isspace(buf[pos]));
 
     // grab the word from the current buffer
@@ -90,6 +94,7 @@ char *next_tok(void){
         toklen += fraglen;
     }
 
+    //append string end
     if (tok) {
         tok[toklen] = '\0';
     }

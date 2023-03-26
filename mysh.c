@@ -36,15 +36,23 @@ int main(){
         //temp code to made sure commands are reaching arraylist here (they are)
         int j = size(&commands);
         if (j == 0) continue;
+        int z;
         for(int i = 0; i < j; i++){
             char* p = al_lookup(&commands, i);
+            if (!strcmp(p, q)) {
+                z =1;
+                break;
+            }
             write (STDOUT_FILENO, p, strlen(p));
-            write (STDOUT_FILENO, s, strlen(s));
+            write (STDOUT_FILENO, nl, strlen(nl));
         }
-        write (STDOUT_FILENO, nl, strlen(nl));
-
+        if (z ==1) break;
         //do stuff//
+
     }
+
+    write (STDOUT_FILENO, omsg, strlen(omsg));
+
 }
 
 /*
