@@ -53,6 +53,19 @@ char *next_tok(void){
     do {
         //printf("readcom\n");
 
+        //check exceptions
+        if (buf[pos] == '<' || buf[pos] == '>' || buf[pos] == '|'){
+
+            if(pos > start){
+                break;
+            }
+            else if(pos==start){
+                pos++;
+                break;
+            }
+            
+        }
+
         //increment forward
         ++pos;
 
@@ -62,6 +75,9 @@ char *next_tok(void){
                 break;
             }
         }
+
+        
+        
 
         //if reached end of buffer
         if (pos == bytes) {

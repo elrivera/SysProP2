@@ -10,12 +10,16 @@ list_t parse(int fd);
 int main(){
     char buf[100];
     char *msgg="mysh> ";
-    char *msg="you wrote:";
+    char *msg="parameters:\n";
+    char *mmsg="command: ";
     char *omsg="goodbye!\n";
-    char *q = "q";
+    char *exit = "exit";
     char *nl = "\n";
     char * s = " ";
     printf("Welcome to MyShell!\n");
+
+
+    //HAVE TO IMPLEMENT CD & PWD OURSELVES
     
     while (1) {
         //write mysh prompt
@@ -32,7 +36,7 @@ int main(){
         //create arraylist of commands
         list_t commands = parse(STDIN_FILENO);
         
-
+        /*
         //temp code to made sure commands are reaching arraylist here (they are)
         int j = size(&commands);
         if (j == 0) continue;
@@ -47,11 +51,56 @@ int main(){
             write (STDOUT_FILENO, nl, strlen(nl));
         }
         if (z ==1) break;
+        */
         //do stuff//
+       
+        //Now we have to go through the commands and execute them
+        //special cases we have to account for:
+        //     "|"    -  Sub Command
+        //  "<" & ">" -  File redirect
+        //     "*"    -  Wildcards
+        
+        char cmd[100];
+        char *envp[] = {(char *) "PATH=/bin", 0 };
+
+        int z;
+        int l = al_length(&commands);
+        char* command = al_lookup(&commands, 0);
+        //write (STDOUT_FILENO, mmsg, strlen(mmsg));
+        //write (STDOUT_FILENO, command, strlen(command));
+        //write (STDOUT_FILENO, nl, strlen(nl));
+
+        char* parameters[l];
+        //write (STDOUT_FILENO, msg, strlen(msg));
+        for(int i = 1; i < l; i++){
+            parameters[i-1] = al_lookup(&commands, i);
+            if (!strcmp(parameters[i-1], exit)) {
+                z =1;
+                break;
+            }
+            //break for cases?
+            //write (STDOUT_FILENO, parameters[i-1], strlen(parameters[i-1]));
+            //write (STDOUT_FILENO, nl, strlen(nl));
+        }
+        if (z ==1) break;
+        //WILL NOT WORK ONCE WE START IMPLEMENTING SUBCOMMANDS
+        // -need to figure out how to append NULL to end of command list if encounter another command
+        parameters[l] = NULL;
+
+        if(fork() != 0) {   //Parent
+            wait NULL;      //Wait for child
+        }
+        else{
+            strcpy(cmd, "/bin/");
+            strcat(cmd, command);
+            execve (cmd, parameters, envp);
+        }
+        
 
     }
 
     write (STDOUT_FILENO, omsg, strlen(omsg));
+    //return EXIT_SUCCESS;
 
 }
 
