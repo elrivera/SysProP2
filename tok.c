@@ -76,9 +76,6 @@ char *next_tok(void){
             }
         }
 
-        
-        
-
         //if reached end of buffer
         if (pos == bytes) {
             //printf("ref\n");

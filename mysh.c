@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/wait.h>
 #include "arraylist.h"
 #include "tok.h"
  
@@ -16,7 +17,8 @@ int main(){
     char *exit = "exit";
     char *nl = "\n";
     char * s = " ";
-    printf("Welcome to MyShell!\n");
+    char *init =  "Welcome to MyShell!\n";
+    write (STDOUT_FILENO, init, strlen(init));
 
 
     //HAVE TO IMPLEMENT CD & PWD OURSELVES
@@ -37,7 +39,7 @@ int main(){
         list_t commands = parse(STDIN_FILENO);
         
         /*
-        //temp code to made sure commands are reaching arraylist here (they are)
+        //temp code to made sure commands are reaching arraylist
         int j = size(&commands);
         if (j == 0) continue;
         int z;
@@ -52,6 +54,7 @@ int main(){
         }
         if (z ==1) break;
         */
+
         //do stuff//
        
         //Now we have to go through the commands and execute them
@@ -66,34 +69,38 @@ int main(){
         int z;
         int l = al_length(&commands);
         char* command = al_lookup(&commands, 0);
+        if (!strcmp(command, exit)) {
+                break;
+            }
         //write (STDOUT_FILENO, mmsg, strlen(mmsg));
         //write (STDOUT_FILENO, command, strlen(command));
         //write (STDOUT_FILENO, nl, strlen(nl));
 
         char* parameters[l];
         //write (STDOUT_FILENO, msg, strlen(msg));
-        for(int i = 1; i < l; i++){
-            parameters[i-1] = al_lookup(&commands, i);
-            if (!strcmp(parameters[i-1], exit)) {
+        for(int i = 0; i < l; i++){
+            parameters[i] = al_lookup(&commands, i);
+            if (!strcmp(parameters[i], exit)) {
                 z =1;
                 break;
             }
             //break for cases?
-            //write (STDOUT_FILENO, parameters[i-1], strlen(parameters[i-1]));
+
+            //write (STDOUT_FILENO, parameters[i], strlen(parameters[i]));
             //write (STDOUT_FILENO, nl, strlen(nl));
         }
         if (z ==1) break;
         //WILL NOT WORK ONCE WE START IMPLEMENTING SUBCOMMANDS
         // -need to figure out how to append NULL to end of command list if encounter another command
         parameters[l] = NULL;
-
+        
         if(fork() != 0) {   //Parent
             wait NULL;      //Wait for child
         }
         else{
             strcpy(cmd, "/bin/");
             strcat(cmd, command);
-            execve (cmd, parameters, envp);
+            execve (cmd, parameters, envp); //execute command
         }
         
 
@@ -115,25 +122,17 @@ void read_input(){
 
 //take input and compose into arrayList
 list_t parse(int fd){
+
     list_t commands;
     al_init(&commands, 16);
-
-    //printf("here\n");
-
     char* tok;
-    //printf("4here\n");
     tok_init(fd);
-    //printf("5here\n");
     
     //call tokenizer and fill arraylist
     while((tok = next_tok())){
-        //printf("2here\n");
-        //printf("%s\n", tok);
         al_push(&commands, strdup(tok));
         free(tok);
     }
     
-    //printf("3here\n");
-
     return commands;
 }
