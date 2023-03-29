@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <dirent.h>
 #include "arraylist.h"
 #include "tok.h"
  
@@ -22,6 +23,14 @@ int main(){
 
 
     //HAVE TO IMPLEMENT CD & PWD OURSELVES
+    void getDir(){
+        char cwd[1024]; // buffer size
+        getcwd(cwd, sizeof(cwd));
+
+        // int chdir(char *pathname), returns 0 if successful;
+        // char *getcwd(char *buf, size_t size);
+    }
+    
     
     while (1) {
         //write mysh prompt
