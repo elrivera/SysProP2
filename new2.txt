@@ -1,5 +1,1 @@
-pwd
-ls
-ls -l
-cat text.txt
-exit
+here is some sample text that i wrote.

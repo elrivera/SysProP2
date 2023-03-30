@@ -47,6 +47,7 @@ int main(int argc, char **argv){
     char *pwd = "pwd";
     char *cd = "cd";
     int err = 0;
+    int p = 0;
     write (STDOUT_FILENO, init, strlen(init));
 
 
@@ -117,7 +118,9 @@ int main(int argc, char **argv){
         char* command = al_lookup(&commands, 0);
         char* in = NULL;
         char* out = NULL;
+        p = 0;
         int indicator = 0;
+        int i = 0;
 
         
         //write (STDOUT_FILENO, mmsg, strlen(mmsg));
@@ -128,7 +131,7 @@ int main(int argc, char **argv){
         al_init(&parameters, 16);
         //char* parameters[l];
         char* cur;
-        int i = 0;
+        
         //write (STDOUT_FILENO, msg, strlen(msg));
         while((cur = al_lookup(&commands, i))){
             //printf("here\n");
@@ -158,7 +161,11 @@ int main(int argc, char **argv){
                     continue;
                 }
             }
-
+            if(!strcmp(cur, "|")){
+                p = 1;
+                i++;
+                break;
+            }
             al_push(&parameters, cur);
             //parameters[i] = al_lookup(&commands, i);
             if (!strcmp(cur, exit)) {
@@ -171,6 +178,7 @@ int main(int argc, char **argv){
                 z = 2;
                 break;
             }
+
             
             //write (STDOUT_FILENO, cur, strlen(cur));
             //write (STDOUT_FILENO, nl, strlen(nl));
@@ -185,6 +193,127 @@ int main(int argc, char **argv){
         for(int i = 0; i < pl; i++){
             printf("%s\n", param[i]);
         }
+
+        if (p == 1){     //repeat for second command
+            char* c2 = al_lookup(&commands, i);
+            list_t p2;
+            al_init(&p2, 16);
+
+
+            while((cur = al_lookup(&commands, i))){
+                //printf("here\n");
+                if (!strcmp(cur, "<")){
+                    //printf("redirect input\n");
+                    indicator = 1;
+                    i++;
+                    continue;
+                }
+                if (!strcmp(cur, ">")){
+                    //printf("redirect output\n");
+                    indicator = -1;
+                    i++;
+                    continue;
+                }
+                if (indicator != 0){
+                    if(indicator == 1){
+                        in = cur;
+                        indicator = 0;
+                        i++;
+                        continue;
+                    }
+                    else if(indicator == -1){
+                        out = cur;
+                        indicator = 0;
+                        i++;
+                        continue;
+                    }
+                }
+                if(!strcmp(cur, "|")){
+                    p = 1;
+                    i++;
+                    break;
+                }
+                al_push(&p2, cur);
+                //parameters[i] = al_lookup(&commands, i);
+                if (!strcmp(cur, exit)) {
+                    z =1;
+                    break;
+                }
+                //break for cases?
+                if (!strcmp(cur, pwd)) {
+                    getDir();
+                    z = 2;
+                    break;
+                }
+
+            
+                //write (STDOUT_FILENO, cur, strlen(cur));
+                //write (STDOUT_FILENO, nl, strlen(nl));
+                i++;
+            }
+
+            char cmd2[100];
+            param = al_data(&p2);
+            int pl = al_length(&p2);
+            printf("confirm 2 parameters\n");
+            for(int i = 0; i < pl; i++){
+                printf("%s\n", param[i]);
+            }
+
+            //now pipe, we have both commands and parameters
+
+            int fd[2];
+            if(pipe(fd) == -1){
+                perror("pipe failed\n");
+            }
+            int pid1 = fork();
+            if(pid1 < 0){
+                perror("failed fork1\n");
+            }
+            if (pid1 == 0){
+                //child
+                dup2(fd[1], STDOUT_FILENO);
+                close(fd[0]);
+                close(fd[1]);
+                strcpy(cmd, "/bin/");
+                strcat(cmd, command);
+                if (execve (cmd, al_data(&parameters), envp) == -1){ //execute command
+                    perror("could not execute1");
+                    err = 1;
+                }
+            }
+            if (z ==1) break;
+            if (z == 2) continue;
+
+            int pid2 = fork();
+            if(pid2 < 0){
+                perror("failed fork2\n");
+            }
+            if(pid2 == 0){
+                dup2(fd[0], STDIN_FILENO);
+                close(fd[0]);
+                close(fd[1]);
+                strcpy(cmd2, "/bin/");
+                strcat(cmd2, c2);
+                if (execve (c2, al_data(&p2), envp) == -1){ //execute command
+                    perror("could not execute2");
+                    err = 1;
+                }
+            }
+
+            close(fd[0]);
+            close(fd[1]);
+
+            waitpid(pid1, NULL, 0);
+            waitpid(pid2, NULL, 0);
+
+            al_destroy(&commands);
+            al_destroy(&parameters);
+            continue;
+        }
+
+
+        
         
         if (in != NULL) printf("final input will be: %s\n", in);
         else printf("no in\n");
@@ -243,7 +372,9 @@ int main(int argc, char **argv){
             } 
         }
         
+        
         al_destroy(&commands);
+        al_destroy(&parameters);
     }
 
     if(err != 0) printf("!");
