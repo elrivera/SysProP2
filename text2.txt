@@ -1,1 +1,20 @@
-this is some sample text that I wrote.
+total 256
+-rw-r--r--  1 lbr  staff    266 Mar 29 13:35 Makefile
+-rw-r--r--  1 lbr  staff   9688 Mar 29 13:35 arraylist-debug.o
+-rw-r--r--  1 lbr  staff   2940 Mar 29 16:47 arraylist.c
+-rw-r--r--  1 lbr  staff    466 Mar 29 16:47 arraylist.h
+-rw-r--r--  1 lbr  staff   2568 Mar 29 16:49 arraylist.o
+drwxr-xr-x@ 3 lbr  staff     96 Mar 29 15:04 f
+-rw-r--r--  1 lbr  staff    737 Mar 22 22:10 main.c
+-rwxr-xr-x  1 lbr  staff  34800 Mar 29 20:46 mysh
+-rw-r--r--  1 lbr  staff   6832 Mar 29 20:46 mysh.c
+-rw-r--r--  1 lbr  staff   4952 Mar 29 20:46 mysh.o
+-rw-r-----  1 lbr  staff     39 Mar 29 20:44 new.txt
+-rw-r-----  1 lbr  staff     39 Mar 29 20:44 new2.txt
+-rw-r--r--  1 lbr  staff    644 Mar 22 22:10 par.c
+-rw-r--r--  1 lbr  staff     39 Mar 29 20:27 text.txt
+-rw-r--r--  1 lbr  staff     39 Mar 29 20:47 text2.txt
+-rw-r--r--  1 lbr  staff   9960 Mar 29 13:35 tok-debug.o
+-rw-r--r--  1 lbr  staff   2513 Mar 28 19:40 tok.c
+-rw-r--r--  1 lbr  staff     44 Mar 22 22:10 tok.h
+-rw-r--r--  1 lbr  staff   2336 Mar 29 13:56 tok.o

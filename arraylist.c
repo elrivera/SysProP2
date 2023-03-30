@@ -13,7 +13,7 @@ if (list->data == NULL) { \
 	fputs("Use of unallocated or destroyed arraylist\n", stderr); \
 	exit(EXIT_FAILURE); \
 }
-#else
+#else 
 #define SAFETY_CHECK
 #endif
 
@@ -51,6 +51,9 @@ unsigned al_length(list_t *list)
 	return list->size;
 }
 
+char** al_data(list_t *list){
+	return list->data;
+}
 
 /* Writes the integer stored at the specified index to the specified destination
  *

@@ -1,0 +1,7 @@
+here is some sample text that i wrote.
+003    0:00.06 /bin/zsh -il
+19635 ttys004    0:00.06 /bin/zsh -il
+22842 ttys005    0:00.17 /bin/zsh -il
+23522 ttys005    0:00.00 ./mysh
+23534 ttys005    0:00.00 ./mysh
+23508 ttys006    0:00.03 -zsh

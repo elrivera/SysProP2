@@ -1,0 +1,5 @@
+pwd
+ls
+ls -l
+cat text.txt
+exit

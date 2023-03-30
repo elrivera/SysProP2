@@ -11,6 +11,7 @@ int  al_init(list_t *list, unsigned capacity);
 void al_destroy(list_t *list);
 
 unsigned al_length(list_t *list);
+char** al_data(list_t *list);
 char* al_lookup(list_t *list, unsigned index);
 int al_insert(list_t *list, unsigned index, char* src);
 
