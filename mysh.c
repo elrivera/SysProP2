@@ -34,7 +34,7 @@ void changeDir(char* dest){
     }
 }
 
-int main(){
+int main(int argc, char **argv){
     char buf[100];
     char *msgg="mysh> ";
     char *msg="parameters:\n";
@@ -50,8 +50,23 @@ int main(){
     write (STDOUT_FILENO, init, strlen(init));
 
 
-    //HAVE TO IMPLEMENT CD & PWD OURSELVES
-    
+    //batch mode
+    // if(argc > 1){
+
+    //     char cmd[100];
+    //     char *envp[] = {(char *) "PATH=/bin", 0 };
+
+    //     int z = 0;
+    //     int l = al_length(&commands);
+    //     char* command = al_lookup(&commands, 0);
+    //     char* in = NULL;
+    //     char* out = NULL;
+    //     int indicator = 0;
+
+    //     return;
+    // }
+
+    //interactive Mode
     while (1) {
         if (err != 0) break;
 
