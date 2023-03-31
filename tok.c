@@ -13,6 +13,7 @@ static unsigned pos;
 static unsigned bytes;
 static int closed;
 static int input;
+int esc = 0;
 
 void tok_init(int fd){
 
@@ -23,6 +24,7 @@ void tok_init(int fd){
 }
 
 char *next_tok(void){
+
 
     if (closed) return NULL;
     // skip whitespace

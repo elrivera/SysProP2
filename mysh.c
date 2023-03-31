@@ -27,6 +27,17 @@ void getDir(){
 }
 
 void changeDir(char* dest){
+
+    if (dest == NULL){
+
+        char* to = getenv("HOME");
+
+        if (chdir(to) != 0){
+            perror("cd failed");
+        }
+        return;
+    }
+
     char cwd[1024];
     getcwd(cwd, sizeof(cwd));
     char* dir = strcat(cwd, "/");
@@ -62,7 +73,13 @@ int main(int argc, char **argv){
 
     int err = 0;
     int p = 0;
+    if(argc > 2) {
+        printf("too many arguments. failed\n");
+        return 1;
+    }
+
     write (STDOUT_FILENO, init, strlen(init));
+    int rep = 0;
 
 
     //batch mode
@@ -80,6 +97,20 @@ int main(int argc, char **argv){
 
     //     return;
     // }
+
+    if(argc == 2){
+            int file = open(argv[1], O_RDONLY);
+            if (file == -1){
+                printf("could not open file");
+                return 1;
+            }
+                
+            if (dup2(file, STDIN_FILENO) == -1){
+                printf("could not change input");
+                return 2;
+            }
+            
+        }
 
     //interactive Mode
     while (1) {
@@ -206,11 +237,14 @@ int main(int argc, char **argv){
             }
 
             //check for glob
+            
                 if(strchr(cur, '*')){
-                    printf("ast\n");
+                    //printf("ast\n");
                     asterisk(cur, &parameters);
+                    i++;
                     continue;
                 }
+            
 
             //push cur
             al_push(&parameters, cur);
@@ -223,11 +257,7 @@ int main(int argc, char **argv){
             }
 
             //check for pwd
-            if (!strcmp(cur, pwd)) {
-                getDir();
-                z = 2;
-                break;
-            }
+           
 
             
             //write (STDOUT_FILENO, cur, strlen(cur));
@@ -241,15 +271,17 @@ int main(int argc, char **argv){
             write (STDOUT_FILENO, oop, strlen(oop));
             continue;
         }
-
+        
         //temp code to confirm parameters  
         char** param = al_data(&parameters);
         int pl = al_length(&parameters);
+
+        /*
         printf("confirm parameters\n");
         for(int i = 0; i < pl; i++){
             printf("%s\n", param[i]);
         }
-
+        */
 
         //repeat for second command if fork
         if (p == 1){     
@@ -276,11 +308,14 @@ int main(int argc, char **argv){
                     break;
                 }
 
+                
                 //check for glob
                 if(strchr(cur, '*')){
                     asterisk(cur, &parameters);
+                    i++;
                     continue;
                 }
+                
 
                 //push to parameters 2 arraylist
                 al_push(&p2, cur);
@@ -293,11 +328,7 @@ int main(int argc, char **argv){
 
 
                 //check if pwd
-                if (!strcmp(cur, pwd)) {
-                    getDir();
-                    z = 2;
-                    break;
-                }
+                
 
             
                 //write (STDOUT_FILENO, cur, strlen(cur));
@@ -342,6 +373,11 @@ int main(int argc, char **argv){
                 close(fd[0]);
                 close(fd[1]);
 
+                if (!strcmp(command, pwd)) {
+                    getDir();
+                    return 0;
+                }
+
                 if(strchr(command, '/') != NULL) strcpy(cmd, command);
                 //get command pathif necessary
                 else{
@@ -371,6 +407,10 @@ int main(int argc, char **argv){
                 close(fd[0]);
                 close(fd[1]);
 
+                if (!strcmp(command, pwd)) {
+                    getDir();
+                    return 0;
+                }
                 
                 if(strchr(c2, '/') != NULL) strcpy(cmd2, c2);
                 //get command path if necessary
@@ -423,13 +463,13 @@ int main(int argc, char **argv){
         }
 
 
-        
+        /*
         //temp code to check input/output redirect
         if (in != NULL) printf("final input will be: %s\n", in);
         else printf("no in\n");
         if (out != NULL) printf("final output will be: %s\n", out);
         else printf("no out\n");
-        
+        */
       
         if (z ==1) break;
         if (z == 2) continue;
@@ -444,11 +484,13 @@ int main(int argc, char **argv){
         //temp call to cd - need to change!!
         if(!strcmp(command, cd)) {
             changeDir(al_lookup(&parameters, 1));
+            //printf("changed\n");
             al_destroy(&commands);
+            al_destroy(&parameters);
             continue;
         }
 
-        /*
+        
         
         //create child process
         if(fork() != 0) {   //Parent
@@ -491,6 +533,10 @@ int main(int argc, char **argv){
                     return 2;
                 }
             }
+            if (!strcmp(command, pwd)) {
+                getDir();
+                return 0;
+            }
 
             //get command path
             if(strchr(command, '/')) {
@@ -509,7 +555,7 @@ int main(int argc, char **argv){
                 return 3;
             } 
         }
-        */
+        
         //clean arraylists
         al_destroy(&commands);
         al_destroy(&parameters);
@@ -609,16 +655,97 @@ char* checkFile(char* command){
     }
 }
 
-void asterisk(char* tok, list_t* param){
 
-    DIR *d;
-    struct dirent *dir;
-    d = opendir(".");
-    if (d) {
-    while ((dir = readdir(d)) != NULL) {
-      printf("%s\n", dir->d_name);
+void asterisk(char* tok, list_t* param){
+    const char *ast = "*";
+    
+    if(strcmp(tok, "*")){
+        //printf("in\n");
+        struct dirent *de;  // Pointer for directory entry
+        list_t parts;
+        char* p[2];
+        al_init(&parts, 8);
+
+        char* nt = strtok(tok, ast);
+        p[0] = nt;
+        if(tok[0] == '*'){
+            p[1] = p[0];
+            p[0] = NULL;
+        }
+        else{
+            char* nt = strtok(NULL, ast);
+            p[1] = nt;
+        }
+
+        //printf("in: %s\n", p[0]);
+        //printf("out: %s\n", p[1]);
+
+        al_push(&parts, NULL);
+        //printf("parts in \n");
+        // opendir() returns a pointer of DIR type. 
+        DIR *dr = opendir(".");
+  
+        if (dr == NULL){  // opendir returns NULL if couldn't open directory
+            //printf("Could not open current directory" );
+            //return 0;
+        }
+  
+        while ((de = readdir(dr)) != NULL){
+            //printf("%s\n", de->d_name);
+            
+            int chf = 1;
+            int chb = 1;
+            
+            if(p[0] != NULL){
+                for(int i = 0; i < strlen(p[0]); i++){
+                    if(p[0][i] != de->d_name[i]) chf = 0;
+                }
+            }
+
+            if(p[1] != NULL){
+                for(int i = 0; i < strlen(p[1]); i++){
+                    if(p[1][i] != de->d_name[strlen(de->d_name) -1 - i]) chf = 0;
+                }
+            }
+
+            if(chf == 1 && chb == 1) al_push(param, de->d_name);
+
+
+            /*
+            int i = 0;
+            char* temp = al_lookup(&parts, i);
+            while(temp != NULL){
+                if(strstr(de->d_name, temp)){
+                    i++;
+                    temp = al_lookup(&parts, i);
+                }
+                else break;
+            }
+            if(temp == NULL) {
+                al_push(param, de->d_name);
+                printf("pushed: %s\n", de->d_name);
+            }
+            */
+        }       
+  
+        closedir(dr);  
     }
-    closedir(d);
+
+    else{
+        struct dirent *de;  // Pointer for directory entry
+  
+        // opendir() returns a pointer of DIR type. 
+        DIR *dr = opendir(".");
+  
+        if (dr == NULL){  // opendir returns NULL if couldn't open directory
+            printf("Could not open current directory" );
+            //return 0;
+        }
+  
+        while ((de = readdir(dr)) != NULL)
+            printf("%s\n", de->d_name);
+  
+        closedir(dr);
     }
     /*
     DIR *d;
@@ -627,11 +754,12 @@ void asterisk(char* tok, list_t* param){
         printf("cmp\n");
         d = opendir(".");
         if(d){
-            while((dir = readdir(d)) != NULL){
+            while(dir != NULL){
                 if (dir->d_type == DT_REG){
                     printf("%s\n", dir->d_name);
                     al_push(param, dir->d_name);
                 }
+                dir = readdir(d);
             }
             closedir(d);
         }
@@ -646,8 +774,8 @@ void asterisk(char* tok, list_t* param){
         prior[j] = tok[i];
 
     }
-    */
     
+    */
 }
 
 

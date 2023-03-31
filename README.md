@@ -10,6 +10,7 @@ Joshua Mondragon, jbm215
 Luke Rivera, lbr58
 
 
+We implemented extension 3 on this project
 
 
 Test Plan (and descriptions)
