@@ -29,7 +29,7 @@ int al_init(list_t *list, unsigned capacity)
 	assert(capacity > 0);
 	list->capacity = capacity;
 	list->size = 0;
-	list->data = malloc(sizeof(int) * capacity);
+	list->data = malloc(sizeof(char*) * capacity);
 	
 	return list->data != NULL;
 }

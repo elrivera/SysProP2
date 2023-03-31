@@ -1,5 +1,6 @@
-here is some sample text that i wrote.
-003    0:00.06 /bin/zsh -il
+command path: /usr/bin/wc
+       1       8      39 text.txt
+sh -il
 19635 ttys004    0:00.06 /bin/zsh -il
 22842 ttys005    0:00.17 /bin/zsh -il
 23522 ttys005    0:00.00 ./mysh

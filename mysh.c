@@ -13,6 +13,8 @@
 list_t parse(int fd);
 void getDir();
 void changeDir(char* dest);
+char* checkFile(char* command);
+void asterisk(char* tok, list_t* param);
 
 void getDir(){
     char cwd[1024]; // buffer size
@@ -45,7 +47,19 @@ int main(int argc, char **argv){
     char * s = " ";
     char *init =  "Welcome to MyShell!\n";
     char *pwd = "pwd";
+    char *oop = "!";
     char *cd = "cd";
+    char *piperr = "cannot pipe twice in one command\n";
+    char *inerr = "cannot redirect input multiple times in the same command\n";
+    char *outerr = "cannot redirect output multiple times in the same command\n";
+    char *tmerr = "cannot pipe and redirect io in the same command\n";
+    char *filefail = "could not find file\n";
+    char *dupfail = "couldn't dup\n";
+    char *execfail = "could not execute\n";
+    char *comfail = "could not find command\n";
+    char *pipefail = "pipe failed";
+    char *forkfail = "fork failed";
+
     int err = 0;
     int p = 0;
     write (STDOUT_FILENO, init, strlen(init));
@@ -110,8 +124,7 @@ int main(int argc, char **argv){
         //  "<" & ">" -  File redirect
         //     "*"    -  Wildcards
         
-        char cmd[100];
-        char *envp[] = {(char *) "PATH=/bin", 0 };
+        char *cmd;
 
         int z = 0;
         int l = al_length(&commands);
@@ -128,51 +141,88 @@ int main(int argc, char **argv){
         //write (STDOUT_FILENO, nl, strlen(nl));
 
         list_t parameters;
-        al_init(&parameters, 16);
+        al_init(&parameters, 32);
         //char* parameters[l];
         char* cur;
         
         //write (STDOUT_FILENO, msg, strlen(msg));
         while((cur = al_lookup(&commands, i))){
             //printf("here\n");
+
             if (!strcmp(cur, "<")){
                 //printf("redirect input\n");
+                if(in != NULL || indicator != 0){
+                        write (STDOUT_FILENO, inerr, strlen(inerr));
+                        err = 1;
+                        break;
+                    }
                 indicator = 1;
                 i++;
                 continue;
             }
             if (!strcmp(cur, ">")){
                 //printf("redirect output\n");
+                if(out != NULL || indicator != 0){
+                        write (STDOUT_FILENO, outerr, strlen(outerr));
+                        err = 1;
+                        break;
+                    }
                 indicator = -1;
                 i++;
                 continue;
             }
+
+            //check for pipe
+            if(!strcmp(cur, "|")){
+                if(out != NULL || in != NULL || indicator != 0){
+                    write (STDOUT_FILENO, tmerr, strlen(tmerr));
+                    err = 1;
+                }
+                p = 1;
+                i++;
+                break;
+            }
+
+            //react to </>
             if (indicator != 0){
+                //change input
                 if(indicator == 1){
+                    //detect illegal input
+                    
                     in = cur;
                     indicator = 0;
                     i++;
                     continue;
                 }
+                //change output
                 else if(indicator == -1){
+                    //detect illegal input
+                    
                     out = cur;
                     indicator = 0;
                     i++;
                     continue;
                 }
             }
-            if(!strcmp(cur, "|")){
-                p = 1;
-                i++;
-                break;
-            }
+
+            //check for glob
+                if(strchr(cur, '*')){
+                    printf("ast\n");
+                    asterisk(cur, &parameters);
+                    continue;
+                }
+
+            //push cur
             al_push(&parameters, cur);
-            //parameters[i] = al_lookup(&commands, i);
+            
+
+            //check for exit
             if (!strcmp(cur, exit)) {
                 z =1;
                 break;
             }
-            //break for cases?
+
+            //check for pwd
             if (!strcmp(cur, pwd)) {
                 getDir();
                 z = 2;
@@ -185,8 +235,14 @@ int main(int argc, char **argv){
             i++;
         }
 
-        //confirm parameters//in/out
-        
+        //address illegal input
+        if (err == 1){
+            err =0;
+            write (STDOUT_FILENO, oop, strlen(oop));
+            continue;
+        }
+
+        //temp code to confirm parameters  
         char** param = al_data(&parameters);
         int pl = al_length(&parameters);
         printf("confirm parameters\n");
@@ -194,52 +250,49 @@ int main(int argc, char **argv){
             printf("%s\n", param[i]);
         }
 
-        if (p == 1){     //repeat for second command
+
+        //repeat for second command if fork
+        if (p == 1){     
             char* c2 = al_lookup(&commands, i);
             list_t p2;
             al_init(&p2, 16);
 
-
+            //finish parsing input
             while((cur = al_lookup(&commands, i))){
                 //printf("here\n");
-                if (!strcmp(cur, "<")){
+
+                //detect input redirect
+                if (!strcmp(cur, "<") || !strcmp(cur, ">")){
                     //printf("redirect input\n");
-                    indicator = 1;
-                    i++;
-                    continue;
-                }
-                if (!strcmp(cur, ">")){
-                    //printf("redirect output\n");
-                    indicator = -1;
-                    i++;
-                    continue;
-                }
-                if (indicator != 0){
-                    if(indicator == 1){
-                        in = cur;
-                        indicator = 0;
-                        i++;
-                        continue;
-                    }
-                    else if(indicator == -1){
-                        out = cur;
-                        indicator = 0;
-                        i++;
-                        continue;
-                    }
-                }
-                if(!strcmp(cur, "|")){
-                    p = 1;
-                    i++;
+                    write (STDOUT_FILENO, tmerr, strlen(tmerr));
+                    err = 1;
                     break;
                 }
+
+                //detect illegal input
+                if(!strcmp(cur, "|")){
+                    write (STDOUT_FILENO, piperr, strlen(piperr));;
+                    err = 1;
+                    break;
+                }
+
+                //check for glob
+                if(strchr(cur, '*')){
+                    asterisk(cur, &parameters);
+                    continue;
+                }
+
+                //push to parameters 2 arraylist
                 al_push(&p2, cur);
-                //parameters[i] = al_lookup(&commands, i);
+
+                //check if exit
                 if (!strcmp(cur, exit)) {
                     z =1;
                     break;
                 }
-                //break for cases?
+
+
+                //check if pwd
                 if (!strcmp(cur, pwd)) {
                     getDir();
                     z = 2;
@@ -252,9 +305,18 @@ int main(int argc, char **argv){
                 i++;
             }
 
-            char cmd2[100];
+            //address illegal input
+            if (err == 1){
+                err =0;
+                write (STDOUT_FILENO, oop, strlen(oop));
+                continue;
+            }
+            //setup variables
+            char *cmd2;
             param = al_data(&p2);
             int pl = al_length(&p2);
+
+            //temp parameter confirmation
             printf("confirm 2 parameters\n");
             for(int i = 0; i < pl; i++){
                 printf("%s\n", param[i]);
@@ -262,59 +324,107 @@ int main(int argc, char **argv){
 
             //now pipe, we have both commands and parameters
 
+            //pipe ends
             int fd[2];
             if(pipe(fd) == -1){
-                perror("pipe failed\n");
+                write(STDOUT_FILENO, pipefail, strlen(pipefail));
             }
+            //create process 1
             int pid1 = fork();
             if(pid1 < 0){
-                perror("failed fork1\n");
+                write(STDOUT_FILENO, forkfail, strlen(forkfail));
             }
+
+            //change out and execute process 1
             if (pid1 == 0){
                 //child
                 dup2(fd[1], STDOUT_FILENO);
                 close(fd[0]);
                 close(fd[1]);
-                strcpy(cmd, "/bin/");
-                strcat(cmd, command);
-                if (execve (cmd, al_data(&parameters), envp) == -1){ //execute command
-                    perror("could not execute1");
-                    err = 1;
+
+                if(strchr(command, '/') != NULL) strcpy(cmd, command);
+                //get command pathif necessary
+                else{
+                    cmd = checkFile(command);
+                    if (cmd == NULL) return 4;
+                }
+                if (execv (cmd, al_data(&parameters)) == -1){ //execute command
+                    return 3;
                 }
             }
+
+
             if (z ==1) break;
             if (z == 2) continue;
 
+
+            //create process 2
             int pid2 = fork();
             if(pid2 < 0){
-                perror("failed fork2\n");
+                write(STDOUT_FILENO, forkfail, strlen(forkfail));
             }
+
+            //change input and execute process 2
             if(pid2 == 0){
+                //child
                 dup2(fd[0], STDIN_FILENO);
                 close(fd[0]);
                 close(fd[1]);
-                strcpy(cmd2, "/bin/");
-                strcat(cmd2, c2);
-                if (execve (c2, al_data(&p2), envp) == -1){ //execute command
-                    perror("could not execute2");
-                    err = 1;
+
+                
+                if(strchr(c2, '/') != NULL) strcpy(cmd2, c2);
+                //get command path if necessary
+                else{
+                    cmd2 = checkFile(c2);
+                    if (cmd2 == NULL) return 4;
+                }
+                if (execv (cmd2, al_data(&p2)) == -1){ //execute command
+                    return 3;
                 }
             }
 
+            //parent
             close(fd[0]);
             close(fd[1]);
 
-            waitpid(pid1, NULL, 0);
-            waitpid(pid2, NULL, 0);
+            int pid1stat;
+            int pid2stat;
+            waitpid(pid1, &pid1stat, 0);
+            waitpid(pid2, &pid1stat, 0);
 
+            int p2sc = 0;
+            int p1sc = 0;
+
+            if(WIFEXITED(pid1stat)){
+                p1sc = WEXITSTATUS(pid1stat);
+                if (p1sc == 1) write (STDOUT_FILENO, filefail, strlen(filefail));
+                if (p1sc == 2) write (STDOUT_FILENO, dupfail, strlen(dupfail));
+                if (p1sc == 3) write (STDOUT_FILENO, execfail, strlen(execfail));
+                if (p1sc == 4) write (STDOUT_FILENO, comfail, strlen(comfail));
+
+            }
+
+            if(WIFEXITED(pid2stat)){
+                p2sc = WEXITSTATUS(pid2stat);
+                if (p2sc == 1) write (STDOUT_FILENO, filefail, strlen(filefail));
+                if (p2sc == 2) write (STDOUT_FILENO, dupfail, strlen(dupfail));
+                if (p2sc == 3) write (STDOUT_FILENO, execfail, strlen(execfail));
+                if (p2sc == 4) write (STDOUT_FILENO, comfail, strlen(comfail));
+
+            }
+
+            if (p1sc != 0 || p2sc != 0) write (STDOUT_FILENO, oop, strlen(oop));
+
+            //clean up
             al_destroy(&commands);
             al_destroy(&parameters);
+            al_destroy(&p2);
             continue;
         }
 
 
         
-        
+        //temp code to check input/output redirect
         if (in != NULL) printf("final input will be: %s\n", in);
         else printf("no in\n");
         if (out != NULL) printf("final output will be: %s\n", out);
@@ -323,56 +433,84 @@ int main(int argc, char **argv){
       
         if (z ==1) break;
         if (z == 2) continue;
-        //WILL NOT WORK ONCE WE START IMPLEMENTING SUBCOMMANDS
-        // -need to figure out how to append NULL to end of command list if encounter another command
         
 
-        //temp call to cd - need to change!!
+        //push NULL end
         al_push(&parameters, NULL);
+
+
+
+
+        //temp call to cd - need to change!!
         if(!strcmp(command, cd)) {
             changeDir(al_lookup(&parameters, 1));
             al_destroy(&commands);
             continue;
         }
+
+        /*
         
+        //create child process
         if(fork() != 0) {   //Parent
-            wait NULL;      //Wait for child
+            int wstatus;    //Wait for child
+            wait(&wstatus);
+            if(WIFEXITED(wstatus)){
+                int sc = WEXITSTATUS(wstatus);
+                if (sc == 1) write (STDOUT_FILENO, filefail, strlen(filefail));
+                if (sc == 2) write (STDOUT_FILENO, dupfail, strlen(dupfail));
+                if (sc == 3) write (STDOUT_FILENO, execfail, strlen(execfail));
+                if (sc == 4) write (STDOUT_FILENO, comfail, strlen(comfail));
+
+                if (sc != 0) write (STDOUT_FILENO, oop, strlen(oop));
+            }
         }
         else{
             
+            //check if output redirect
             if(out != NULL){
                 //int saved = dup(STDOUT_FILENO);
                 int file = open(out, O_WRONLY|O_CREAT, 0640);
                 if (file == -1){
-                    perror("couldn't open file\n");
+                    return 1;
                 }
                 
                 if (dup2(file, STDOUT_FILENO) == -1){
-                    perror("couldn't dup\n");
+                    return 2;
                 }
             }
 
+            //check if input redirect
             if(in != NULL){
                 //int saved = dup(STDOUT_FILENO);
                 int file = open(in, O_RDONLY);
                 if (file == -1){
-                    perror("couldn't open file\n");
+                    return 1;
                 }
                 
                 if (dup2(file, STDIN_FILENO) == -1){
-                    perror("couldn't dup\n");
+                    return 2;
                 }
             }
 
-            strcpy(cmd, "/bin/");
-            strcat(cmd, command);
-            if (execve (cmd, al_data(&parameters), envp) == -1){ //execute command
-                perror("could not execute");
-                err = 1;
+            //get command path
+            if(strchr(command, '/')) {
+                printf("pathin\n");
+                strcpy(cmd, command);}
+            //printf("command path: %s\n", cmd);
+            else{
+            cmd = checkFile(command);
+                if(cmd == NULL) {
+                    return 4;
+                }
+            }
+            //execute command
+            if (execv (cmd, al_data(&parameters)) == -1){ //execute command
+
+                return 3;
             } 
         }
-        
-        
+        */
+        //clean arraylists
         al_destroy(&commands);
         al_destroy(&parameters);
     }
@@ -391,6 +529,127 @@ void read_input(){
     while((n = read(STDIN_FILENO, buf, )) > 0)
 }
 */
+
+
+char* checkFile(char* command){
+    struct stat sfile;
+    static char ret[1024];
+    //printf("checkfile!\n");
+    char one[128];
+    char two[128];
+    char three[128];
+    char four[128];
+    char five[128];
+    char six[128];
+
+    strcpy(one, "/usr/local/sbin/");
+    strcat(one, command);
+
+    strcpy(two, "/usr/local/bin/");
+    strcat(two, command);
+
+    strcpy(three, "/usr/sbin/");
+    strcat(three, command);
+
+    strcpy(four, "/usr/bin/");
+    strcat(four, command);
+
+    strcpy(five, "/sbin/");
+    strcat(five, command);
+
+    strcpy(six, "/bin/");
+    strcat(six, command);
+
+    if(stat(one, &sfile) == 0){
+        //printf("checkfile!1\n");
+        strcpy(ret, "/usr/local/sbin/");
+        strcat(ret, command);
+        return ret;
+    }
+
+    else if(stat(two, &sfile) == 0){
+        //printf("checkfile!2\n");
+        strcpy(ret, "/usr/local/bin/");
+        strcat(ret, command);
+        return ret;
+    }
+
+    else if(stat(three, &sfile) == 0){
+        //printf("checkfile!3\n");
+        strcpy(ret, "/usr/sbin/");
+        strcat(ret, command);
+        return ret;
+    }
+    
+
+    else if(stat(four, &sfile) == 0){
+        //printf("checkfile!4\n");
+        strcpy(ret, "/usr/bin/");
+        strcat(ret, command);
+        return ret;
+    }
+
+    else if(stat(five, &sfile) == 0){
+        //printf("checkfile!5\n");
+        strcpy(ret, "/sbin/");
+        strcat(ret, command);
+        return ret;
+    }
+
+    else if(stat(six, &sfile) == 0){
+        //printf("checkfile!6\n");
+        strcpy(ret, "/bin/");
+        strcat(ret, command);
+        return ret;
+    }
+    
+    else {
+        //printf("return null!\n");
+        return NULL;
+    }
+}
+
+void asterisk(char* tok, list_t* param){
+
+    DIR *d;
+    struct dirent *dir;
+    d = opendir(".");
+    if (d) {
+    while ((dir = readdir(d)) != NULL) {
+      printf("%s\n", dir->d_name);
+    }
+    closedir(d);
+    }
+    /*
+    DIR *d;
+    struct dirent *dir;
+    if(!strcmp(tok, "*")){
+        printf("cmp\n");
+        d = opendir(".");
+        if(d){
+            while((dir = readdir(d)) != NULL){
+                if (dir->d_type == DT_REG){
+                    printf("%s\n", dir->d_name);
+                    al_push(param, dir->d_name);
+                }
+            }
+            closedir(d);
+        }
+    }
+    return;
+    
+    char prior[strlen(tok)];
+    char sub[strlen(tok)];
+    int i = 0;
+    int j = 0;
+    while(tok[i] != '*'){
+        prior[j] = tok[i];
+
+    }
+    */
+    
+}
+
 
 //take input and compose into arrayList
 list_t parse(int fd){
