@@ -1,0 +1,22 @@
+total 360
+-rw-r--r--  1 lbr  staff    266 Mar 29 13:35 Makefile
+-rw-r--r--  1 lbr  staff    786 Mar 30 23:59 README.md
+drwxr-xr-x@ 5 lbr  staff    160 Mar 31 15:39 Testscripts
+-rw-r--r--  1 lbr  staff   2942 Mar 30 20:41 arraylist.c
+-rw-r--r--  1 lbr  staff    466 Mar 29 16:47 arraylist.h
+-rw-r--r--  1 lbr  staff   2568 Mar 31 11:43 arraylist.o
+-rw-r--r--  1 lbr  staff     38 Mar 31 21:00 commands.txt
+-rw-r--r--  1 lbr  staff    737 Mar 22 22:10 main.c
+-rwxr-xr-x  1 lbr  staff  35552 Mar 31 21:28 mysh
+-rwxr-xr-x@ 1 lbr  staff  35448 Mar 31 15:54 mysh 2
+-rw-r--r--  1 lbr  staff  24504 Mar 31 21:28 mysh.c
+-rw-r--r--  1 lbr  staff  14184 Mar 31 21:28 mysh.o
+-rw-r-----  1 lbr  staff     11 Mar 31 21:15 new.txt
+-rw-r--r--  1 lbr  staff    644 Mar 22 22:10 par.c
+-rw-r-----  1 lbr  staff     34 Mar 31 15:10 teeext.txt
+-rw-r--r--  1 lbr  staff     35 Mar 31 15:09 teext.txt
+-rw-r--r--  1 lbr  staff   1103 Mar 30 14:06 test.c
+-rw-r--r--  1 lbr  staff     11 Mar 31 15:08 text.txt
+-rw-r--r--  1 lbr  staff   4834 Mar 31 21:14 tok.c
+-rw-r--r--  1 lbr  staff     67 Mar 31 16:16 tok.h
+-rw-r--r--  1 lbr  staff   4016 Mar 31 21:14 tok.o

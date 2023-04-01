@@ -1,0 +1,4 @@
+pwd lwd
+ls
+cat text.txt > new.txt
+exit

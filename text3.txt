@@ -957,4 +957,479 @@ list_t parseb(int fd){
     al_push(&commands, NULL);
     
     return commands;
+}#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include "arraylist.h"
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+#ifdef SAFE
+#define SAFETY_CHECK \
+if (list->data == NULL) { \
+	fputs("Use of unallocated or destroyed arraylist\n", stderr); \
+	exit(EXIT_FAILURE); \
+}
+#else 
+#define SAFETY_CHECK
+#endif
+
+/* Initialize an empty array list with the specified capacity.
+ *
+ * Returns 1 on success, or 0 if unable to allocate storage
+ *
+ * capacity must be greater than 0
+ */
+int al_init(list_t *list, unsigned capacity)
+{
+	if (DEBUG > 1) fprintf(stderr, "Initializing %p with %u\n", list, capacity);
+	assert(capacity > 0);
+	list->capacity = capacity;
+	list->size = 0;
+	list->data = malloc(sizeof(char*) * capacity);
+	
+	return list->data != NULL;
+}
+
+void al_destroy(list_t *list)
+{
+	if (DEBUG > 1) fprintf(stderr, "Destroying %p\n", list);
+	SAFETY_CHECK
+
+	free(list->data);
+
+#ifdef SAFE
+	list->data = NULL;
+#endif
+}
+
+unsigned al_length(list_t *list)
+{
+	return list->size;
+}
+
+char** al_data(list_t *list){
+	return list->data;
+}
+
+/* Writes the integer stored at the specified index to the specified destination
+ *
+ * Returns 1 on success, or 0 if the index is out of range
+ */
+char* al_lookup(list_t *list, unsigned index)
+{
+	SAFETY_CHECK
+
+	if (index >= list->size) return 0;
+	
+	//dest = list->data[index];
+	//printf("succ\n");
+	return list->data[index];
+}
+
+/* Writes the given integer to the specified index in the list
+ *
+ * Returns 1 on success, or 0 if the index is out of range.
+ * Does not extend the length of the list.
+ */
+
+int al_insert(list_t *list, unsigned index, char* src)
+{
+
+	SAFETY_CHECK
+	
+	if (index >= list->size) {
+		printf("fail\n");
+		return 0;
+	}
+	printf("done\n");
+	list->data[index] = src;
+	printf("%s\n", src);
+	printf("%s\n", list->data[index]);
+	return 1;
+}
+
+/* Appends integer to the end of the list
+ *
+ * Returns 1 on success, or 0 if memory allocation failed.
+ */
+int al_push(list_t *list, char* src)
+{
+	if (DEBUG > 1) fprintf(stderr, "push %p: %s\n", list, src);
+	SAFETY_CHECK
+
+	if (list->size == list->capacity) {
+		int newcap = list->capacity * 2;
+		char **new = realloc(list->data, sizeof(char*) * newcap);
+		if (DEBUG) fprintf(stderr, "increase capacity of %p to %d\n", list, newcap);
+		if (!new) return 0;
+
+		// NOTE no changes are made to the list until we know allocation succeded
+		list->data = new;
+		list->capacity = newcap;
+	}
+	
+	list->data[list->size] = src;
+	//printf("%s\n", src);
+	//printf("%s\n", list->data[list->size]);
+	++list->size;
+	
+	return 1;
+}
+
+
+/* Copies last entry in list to destination and reduces size of list by 1.
+ *
+ * Returns 1 on success, or 0 if the list is empty.
+ */
+char* al_pop(list_t *list)
+{
+	if (DEBUG > 1) fprintf(stderr, "pop %p\n", list);
+	SAFETY_CHECK
+	
+	if (list->size == 0) return 0;
+	--list->size;
+	//printf("%s\n", list->data[list->size]);
+	//dest = list->data[list->size];
+	
+	
+	
+	return list->data[list->size];
+}
+
+int size(list_t *list){
+	return list->size;
+}
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <ctype.h>
+#include "tok.h"
+ 
+#ifndef BUFSIZE
+#define BUFSIZE 128
+#endif
+static char buf[BUFSIZE];
+static unsigned pos;
+static unsigned bytes;
+static int closed;
+static int input;
+int esc = 0;
+int end =0;
+
+void tok_init(int fd){
+
+    input = fd;
+    pos = 0;
+    bytes = 0;
+    closed = 0;
+}
+
+char *next_tok(void){
+
+
+    if (closed) return NULL;
+    // skip whitespace
+    
+    while (1) {
+    // ensure we have a char to read
+    if (pos == bytes) {
+            //printf("read\n");
+            bytes = read(STDIN_FILENO, buf, BUFSIZE);
+            //printf("red\n");
+            if (bytes < 1) {
+                closed = 1;
+                return NULL;
+            }
+            pos = 0;
+        }
+        //if new line return null (end of line)
+        if (buf[pos] == '\n') return NULL;
+        if (!isspace(buf[pos])) break;
+        ++pos;
+    }
+
+    // start reading text
+    int start = pos;
+    char *tok = NULL;
+    int toklen = 0;
+    
+    do {
+        //printf("readcom\n");
+
+        //check exceptions
+        if (buf[pos] == '<' || buf[pos] == '>' || buf[pos] == '|'){
+
+            if(pos > start){
+                break;
+            }
+            else if(pos==start){
+                pos++;
+                break;
+            }
+            
+        }
+
+        //increment forward
+        ++pos;
+
+        //check for end of line
+        if(buf[pos] == '\n') {
+            if(pos > start){
+                break;
+            }
+        }
+
+        //if reached end of buffer
+        if (pos == bytes) {
+            //printf("ref\n");
+            // refresh the buffer (see if at end)
+            bytes = read(STDIN_FILENO, buf, BUFSIZE);
+            if (bytes < 1) {
+                closed = 1;
+                break;
+            }
+
+            // save word so far
+            int fraglen = pos - start;
+            tok = realloc(tok, toklen + fraglen + 1);
+            memcpy(tok + toklen, buf + start, fraglen);
+            toklen += fraglen;
+
+            pos = 0;
+            start = 0;
+        }
+
+    } while (!isspace(buf[pos]));
+
+    // grab the word from the current buffer
+    // (Note: start == pos if we refreshed the buffer and got a space first.)
+    if (start < pos) {
+        int fraglen = pos - start;
+        tok = realloc(tok, toklen + fraglen + 1);
+        memcpy(tok + toklen, buf + start, fraglen);
+        toklen += fraglen;
+    }
+
+    //append string end
+    if (tok) {
+        tok[toklen] = '\0';
+    }
+    return tok;
+}
+
+char *next_tokb(void){
+    //printf("nt\n");
+    if(end == 1) return NULL;
+    if (closed) return NULL;
+    // skip whitespace
+    
+    while (1) {
+    // ensure we have a char to read
+    if (pos == bytes) {
+            //printf("read\n");
+            bytes = read(STDIN_FILENO, buf, BUFSIZE);
+            //printf("red\n");
+            if (bytes < 1) {
+                closed = 1;
+                return NULL;
+            }
+            pos = 0;
+        }
+        //if new line return null (end of line)
+        if (buf[pos] == '\n') break;
+        if (!isspace(buf[pos])) break;
+        ++pos;
+    }
+
+    // start reading text
+    int start = pos;
+    char *tok = NULL;
+    int toklen = 0;
+    
+    do {
+        //printf("readcom\n");
+
+        //check exceptions
+        if (buf[pos] == '<' || buf[pos] == '>' || buf[pos] == '|'){
+
+            if(pos > start){
+                break;
+            }
+            else if(pos==start){
+                pos++;
+                break;
+            }
+            
+        }
+
+        //increment forward
+        ++pos;
+
+        //check for end of line
+        if(buf[pos] == '\n') {
+            if(pos > start){
+                break;
+            }
+        }
+
+        //if reached end of buffer
+        if (pos == bytes) {
+            //printf("ref\n");
+            // refresh the buffer (see if at end)
+            bytes = read(STDIN_FILENO, buf, BUFSIZE);
+            if (bytes < 1) {
+                closed = 1;
+                break;
+            }
+
+            // save word so far
+            int fraglen = pos - start;
+            tok = realloc(tok, toklen + fraglen + 1);
+            memcpy(tok + toklen, buf + start, fraglen);
+            toklen += fraglen;
+
+            pos = 0;
+            start = 0;
+        }
+
+    } while (!isspace(buf[pos]));
+
+    // grab the word from the current buffer
+    // (Note: start == pos if we refreshed the buffer and got a space first.)
+    if (start < pos) {
+        int fraglen = pos - start;
+        tok = realloc(tok, toklen + fraglen + 1);
+        memcpy(tok + toklen, buf + start, fraglen);
+        toklen += fraglen;
+    }
+
+    //append string end
+    if (tok) {
+        tok[toklen] = '\0';
+    }
+
+    //printf("%s\n", tok);
+    char* cmp = "exit";
+
+    if(!strcmp(tok, cmp)) end = 1;
+
+    return tok;
+}#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include "arraylist.h"
+#include "tok.h"
+
+int main(){
+    //arraylist tests
+    list_t commands;
+    al_init(&commands, 8);
+
+    char* str = "hello";
+    char* str2 = "helloo";
+    char* str3 = "hellooo";
+    char* res;
+
+    char* one = "one";
+
+    
+
+    al_push(&commands, str);
+    al_push(&commands, str2);
+    al_push(&commands, str3);
+    res = al_lookup(&commands, 0);
+    printf("%s\n", res);
+    al_insert(&commands, 0, one);
+    res = al_lookup(&commands, 0);
+    printf("%s\n", res);
+    res = al_pop(&commands);
+    res = al_pop(&commands);
+    //if(al_pop(res, &commands)){
+        printf("%s\n", res);
+    //}
+    //else printf("fail\n");
+
+    return EXIT_SUCCESS;
+}#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include "arraylist.h"
+#include "tok.h"
+
+/*
+    dealing with bad syntax, e.g., foo < < bar 
+    -> print an error message and skip to the next \name
+
+    dealing with nonsense, e.g., foo > bar | baz
+        where should the output for foo go?
+            (most shell will sent it to bar and send nothing to baz)
+
+consider edge cases and weird scenarios
+    we discussed combining redirection and pipes
+
+    program1 < input | program2 > output
+        fine!
+
+    program1 < input > output1 | program2
+        problem! does output of program1 go to output1 or the pipe?
+        should we just not allow this and report an error?
+
+    program1 | program2 < input
+
+    where are wildcards allowed?
+
+    can you use a wildcard in the first word?
+        ./m*sh
+        yes!
+
+    can you use a wildcard in a redirection?
+
+echo test > foo*
+yes, but only if the pattern matches exactly one file!
+(you don't need to handle this in the assignment)
+
+*/
+
+int main (int argc, char **argv){
+
+    //does the shell continue 
+
+    return;
+}#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include "arraylist.h"
+#include "tok.h"
+
+//parse through input, split into tokens, and put into arraylist
+list_t parse(int fd){
+    list_t commands;
+    al_init(&commands, 8);
+
+    char* tok;
+
+    tok_init(fd);
+
+    while((tok = next_tok())){
+        al_push(&commands, strdup(tok));
+        free(tok);
+    }
+    
+    return commands;
+}
+
+int main(int argc, char *argv[]) { 
+    list_t arr = parse(STDIN_FILENO);
+    int j = size(&arr);
+    for(int i = 0; i < j; i++){
+        char* p = al_lookup(&arr, i);
+        printf("%s\n", p);
+    }
+    return EXIT_SUCCESS;
 }
